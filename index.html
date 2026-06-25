@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>EPS — Compteur d'Actions</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #00e676;
+    --green-dark: #00a152;
+    --green-glow: rgba(0,230,118,0.35);
+    --red: #ff1744;
+    --red-dark: #b2102f;
+    --red-glow: rgba(255,23,68,0.35);
+    --blue: #4fc3f7;
+    --bg: #0d0d0d;
+    --surface: #1a1a1a;
+    --surface2: #252525;
+    --surface3: #2f2f2f;
+    --text: #f0f0f0;
+    --muted: #666;
+    --radius: 16px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+  }
+
+  /* ============ ROTATE WARNING ============ */
+  #rotateWarning {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 999;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    text-align: center;
+    padding: 30px;
+  }
+  #rotateWarning .icon {
+    font-size: 4rem;
+    animation: rotateHint 1.6s ease-in-out infinite;
+  }
+  @keyframes rotateHint {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(90deg); }
+  }
+  #rotateWarning h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    letter-spacing: 2px;
+  }
+  #rotateWarning p { color: var(--muted); font-size: 0.95rem; max-width: 320px; }
+
+  @media (orientation: portrait) {
+    #rotateWarning { display: flex; }
+    #app { display: none !important; }
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  /* ============ VIEWS ============ */
+  .view {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+  .view.active { display: flex; }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid #2a2a2a;
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.1rem, 3vw, 1.6rem);
+    letter-spacing: 3px;
+    color: var(--text);
+  }
+
+  header .badge {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .back-btn {
+    background: var(--surface2);
+    border: 1px solid #333;
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .back-btn:active { filter: brightness(0.85); }
+
+  /* ============ SETUP VIEW ============ */
+  .setup-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 20px 10px;
+  }
+
+  .setup-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .field-block { display: flex; flex-direction: column; gap: 6px; }
+  .field-block.full { grid-column: 1 / -1; }
+
+  .field-label {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 2px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .field-input {
+    background: var(--surface2);
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    width: 100%;
+  }
+  .field-input:focus { outline: 2px solid var(--blue); }
+
+  select.field-input {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 18px) center, calc(100% - 13px) center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+  }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    flex: 1;
+    min-width: 56px;
+    text-align: center;
+    background: var(--surface2);
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 12px 6px;
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 1px;
+    font-size: 1.05rem;
+    color: var(--text);
+    cursor: pointer;
+    transition: transform 0.1s, filter 0.1s;
+  }
+  .chip:active { transform: scale(0.96); }
+  .chip.selected {
+    border-color: var(--blue);
+    background: rgba(79,195,247,0.12);
+    color: var(--blue);
+    box-shadow: 0 0 14px rgba(79,195,247,0.25);
+  }
+
+  .mode-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 4px;
+  }
+  .mode-card {
+    background: var(--surface2);
+    border: 2px solid #333;
+    border-radius: 14px;
+    padding: 16px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.1s, border-color 0.15s, background 0.15s;
+  }
+  .mode-card:active { transform: scale(0.97); }
+  .mode-card .mode-icon { font-size: 1.6rem; margin-bottom: 6px; }
+  .mode-card .mode-title {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 1.5px;
+    font-size: 1.05rem;
+  }
+  .mode-card .mode-desc { font-size: 0.72rem; color: var(--muted); margin-top: 4px; line-height: 1.3; }
+  .mode-card.selected {
+    border-color: var(--blue);
+    background: rgba(79,195,247,0.1);
+    box-shadow: 0 0 16px rgba(79,195,247,0.2);
+  }
+  .mode-card.selected .mode-title { color: var(--blue); }
+
+  .setup-footer {
+    flex-shrink: 0;
+    padding: 12px 20px 16px;
+    background: var(--surface);
+    border-top: 1px solid #2a2a2a;
+  }
+
+  .start-btn {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    background: var(--blue);
+    color: #04202b;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 2px;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(79,195,247,0.3);
+  }
+  .start-btn:active { transform: scale(0.98); filter: brightness(0.9); }
+  .start-btn:disabled {
+    background: var(--surface2);
+    color: var(--muted);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  .setup-error {
+    font-size: 0.8rem;
+    color: var(--red);
+    text-align: center;
+    margin-top: 8px;
+    min-height: 1em;
+  }
+
+  /* ============ COUNTER VIEWS (global + fine) ============ */
+  .main {
+    flex: 1;
+    display: grid;
+    gap: 12px;
+    padding: 12px;
+    min-height: 0;
+  }
+  .main.cols-2 { grid-template-columns: 1fr 1fr; }
+  .main.rows-2 { grid-template-rows: 1fr 1fr; }
+
+  .zone {
+    display: grid;
+    gap: 10px;
+    min-height: 0;
+  }
+  .zone.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 10px;
+    border: 2px solid transparent;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    overflow: hidden;
+    position: relative;
+    min-width: 0;
+  }
+
+  .card.plus { border-color: rgba(0,230,118,0.2); }
+  .card.minus { border-color: rgba(255,23,68,0.2); }
+
+  .card.flash-plus { animation: flashPlus 0.25s ease; }
+  .card.flash-minus { animation: flashMinus 0.25s ease; }
+
+  @keyframes flashPlus {
+    0%   { box-shadow: 0 0 0px var(--green-glow); }
+    50%  { box-shadow: 0 0 40px var(--green-glow); }
+    100% { box-shadow: 0 0 0px var(--green-glow); }
+  }
+  @keyframes flashMinus {
+    0%   { box-shadow: 0 0 0px var(--red-glow); }
+    50%  { box-shadow: 0 0 40px var(--red-glow); }
+    100% { box-shadow: 0 0 0px var(--red-glow); }
+  }
+
+  .card-label {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 2px;
+    font-size: clamp(0.8rem, 2vw, 1.15rem);
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+  .card-label.label-small {
+    font-size: clamp(0.62rem, 1.5vw, 0.88rem);
+    letter-spacing: 1px;
+  }
+  .card.plus .card-label { color: var(--green); }
+  .card.minus .card-label { color: var(--red); }
+
+  .counter {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.2rem, 7.5vw, 5.8rem);
+    line-height: 1;
+    transition: transform 0.1s;
+  }
+  .main.cols-2 > .card .counter { font-size: clamp(5rem, 15vw, 10rem); }
+  .card.plus .counter { color: var(--green); text-shadow: 0 0 30px var(--green-glow); }
+  .card.minus .counter { color: var(--red); text-shadow: 0 0 30px var(--red-glow); }
+
+  .counter.bump { animation: bump 0.15s ease; }
+  @keyframes bump {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+
+  .action-btn {
+    width: 100%;
+    max-width: 320px;
+    padding: 26px 0;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1rem, 2.6vw, 1.5rem);
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: transform 0.1s, filter 0.1s;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .main.cols-2 .action-btn {
+    padding: 28px 0;
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    letter-spacing: 3px;
+  }
+
+  .action-btn:active { transform: scale(0.95); filter: brightness(0.85); }
+
+  .btn-plus {
+    background: var(--green);
+    color: #000;
+    box-shadow: 0 4px 16px var(--green-glow);
+  }
+  .btn-minus {
+    background: var(--red);
+    color: #fff;
+    box-shadow: 0 4px 16px var(--red-glow);
+  }
+
+  footer {
+    display: flex;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border-top: 1px solid #2a2a2a;
+    flex-shrink: 0;
+  }
+
+  .footer-btn {
+    flex: 1;
+    padding: 13px 6px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Barlow', sans-serif;
+    font-size: clamp(0.7rem, 1.8vw, 0.92rem);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 0.1s, filter 0.1s;
+  }
+  .footer-btn:active { transform: scale(0.97); filter: brightness(0.85); }
+
+  .btn-reset {
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid #333;
+  }
+  .btn-stats {
+    background: #1a2a3a;
+    color: #4fc3f7;
+    border: 1px solid #1e4060;
+  }
+  .btn-send {
+    background: linear-gradient(135deg, #00c853, #00a152);
+    color: #fff;
+    border: 1px solid #00702f;
+  }
+  .btn-send:disabled {
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid #333;
+  }
+
+  /* MODAL */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .overlay.visible { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 28px 26px;
+    max-width: 380px;
+    width: 90%;
+    max-height: 86vh;
+    overflow-y: auto;
+    text-align: center;
+    transform: scale(0.9);
+    transition: transform 0.2s;
+    border: 1px solid #2a2a2a;
+  }
+  .overlay.visible .modal { transform: scale(1); }
+
+  .modal-icon { font-size: 2.4rem; margin-bottom: 10px; }
+  .modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .modal-text { color: #aaa; font-size: 0.92rem; line-height: 1.5; margin-bottom: 22px; }
+
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-actions button {
+    flex: 1; padding: 14px; border: none; border-radius: 10px;
+    font-family: 'Barlow', sans-serif; font-weight: 700;
+    font-size: 0.95rem; cursor: pointer; transition: filter 0.1s;
+  }
+  .modal-actions button:active { filter: brightness(0.85); }
+  .btn-confirm-reset { background: var(--red); color: #fff; }
+  .btn-cancel { background: var(--surface2); color: var(--muted); border: 1px solid #333; }
+
+  /* STATS MODAL */
+  .stats-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-bottom: 18px;
+  }
+  .stats-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .stat-box {
+    padding: 12px 8px; border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .stat-box.green { background: rgba(0,230,118,0.08); border: 1px solid rgba(0,230,118,0.2); }
+  .stat-box.red   { background: rgba(255,23,68,0.08);  border: 1px solid rgba(255,23,68,0.2); }
+  .stat-box.blue  { background: rgba(79,195,247,0.08); border: 1px solid rgba(79,195,247,0.2); }
+
+  .stat-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.9rem;
+    line-height: 1;
+  }
+  .stat-box.green .stat-val { color: var(--green); }
+  .stat-box.red   .stat-val { color: var(--red); }
+  .stat-box.blue  .stat-val { color: #4fc3f7; }
+
+  .stat-lbl { font-size: 0.62rem; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: center; line-height: 1.2; }
+
+  .ratio-box {
+    background: var(--surface2);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
+    border: 1px solid #2a2a2a;
+  }
+  .ratio-label { font-size: 0.72rem; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+  .ratio-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.8rem;
+    color: #4fc3f7;
+    text-shadow: 0 0 20px rgba(79,195,247,0.4);
+    line-height: 1;
+  }
+  .ratio-note { font-size: 0.76rem; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+
+  .progress-bar-wrap { margin-bottom: 10px; }
+  .progress-bar-track {
+    height: 8px; border-radius: 99px;
+    background: var(--surface2);
+    overflow: hidden;
+    display: flex;
+  }
+  .progress-bar-fill-plus { background: var(--green); transition: width 0.4s ease; }
+  .progress-bar-fill-minus { background: var(--red); transition: width 0.4s ease; }
+  .progress-bar-labels { display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.7rem; color: var(--muted); }
+
+  .session-recap {
+    background: var(--surface2);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    text-align: left;
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .session-recap strong { color: var(--text); }
+
+  .send-status {
+    font-size: 0.8rem;
+    margin-top: 10px;
+    min-height: 1.2em;
+  }
+  .send-status.ok { color: var(--green); }
+  .send-status.err { color: var(--red); }
+  .send-status.pending { color: var(--blue); }
+</style>
+</head>
+<body>
+
+<div id="rotateWarning">
+  <div class="icon">📱</div>
+  <h2>Tourne ton appareil</h2>
+  <p>Cette application fonctionne uniquement en mode paysage. Tourne ta tablette ou ton téléphone pour continuer.</p>
+</div>
+
+<div id="app">
+
+  <!-- ============ VIEW 0 : SETUP ============ -->
+  <div class="view active" id="viewSetup">
+    <header>
+      <h1>⚡ EPS — Actions</h1>
+      <div class="badge">Nouvelle session</div>
+    </header>
+
+    <div class="setup-scroll">
+      <div class="setup-grid">
+        <div class="field-block">
+          <div class="field-label">Date</div>
+          <input type="date" class="field-input" id="inputDate">
+        </div>
+
+        <div class="field-block">
+          <div class="field-label">Couleur équipe</div>
+          <select class="field-input" id="selectColor" onchange="onColorChange()">
+            <option value="">— Choisir —</option>
+            <option value="vert">Vert</option>
+            <option value="rouge">Rouge</option>
+            <option value="bleu">Bleu</option>
+            <option value="noir">Noir</option>
+            <option value="blanc">Blanc</option>
+            <option value="gris">Gris</option>
+            <option value="jaune">Jaune</option>
+            <option value="autre">Autre…</option>
+          </select>
+        </div>
+
+        <div class="field-block full" id="otherColorBlock" style="display:none;">
+          <div class="field-label">Préciser la couleur</div>
+          <input type="text" class="field-input" id="inputOtherColor" placeholder="Ex : violet">
+        </div>
+
+        <div class="field-block full">
+          <div class="field-label">Pseudo</div>
+          <input type="text" class="field-input" id="inputPseudo" placeholder="Ex : Léo M.">
+        </div>
+
+        <div class="field-block full">
+          <div class="field-label">Classe</div>
+          <div class="chip-row" id="classChips">
+            <div class="chip" data-class="4A" onclick="selectClass('4A')">4A</div>
+            <div class="chip" data-class="4B" onclick="selectClass('4B')">4B</div>
+            <div class="chip" data-class="4C" onclick="selectClass('4C')">4C</div>
+            <div class="chip" data-class="4D" onclick="selectClass('4D')">4D</div>
+            <div class="chip" data-class="4E" onclick="selectClass('4E')">4E</div>
+          </div>
+        </div>
+
+        <div class="field-block full">
+          <div class="field-label">Type d'analyse</div>
+          <div class="mode-row">
+            <div class="mode-card" id="modeGlobal" onclick="selectMode('global')">
+              <div class="mode-icon">🎯</div>
+              <div class="mode-title">Analyse globale</div>
+              <div class="mode-desc">Actions + / Actions −</div>
+            </div>
+            <div class="mode-card" id="modeFine" onclick="selectMode('fine')">
+              <div class="mode-icon">🔍</div>
+              <div class="mode-title">Analyse fine</div>
+              <div class="mode-desc">6 actions détaillées</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="setup-footer">
+      <div class="setup-error" id="setupError"></div>
+      <button class="start-btn" id="startBtn" onclick="startSession()" disabled>Commencer la session</button>
+    </div>
+  </div>
+
+  <!-- ============ VIEW 1 : ANALYSE GLOBALE ============ -->
+  <div class="view" id="viewGlobal">
+    <header>
+      <button class="back-btn" onclick="confirmBack()">← Retour</button>
+      <h1>⚡ Actions</h1>
+      <div class="badge" id="globalBadge">—</div>
+    </header>
+
+    <div class="main cols-2">
+      <div class="card plus" id="cardPlus">
+        <div class="card-label">✅ Actions +</div>
+        <div class="counter" id="counterPlus">0</div>
+        <button class="action-btn btn-plus" onclick="increment('plus')">+ ACTION</button>
+      </div>
+
+      <div class="card minus" id="cardMinus">
+        <div class="card-label">❌ Actions −</div>
+        <div class="counter" id="counterMinus">0</div>
+        <button class="action-btn btn-minus" onclick="increment('minus')">− ACTION</button>
+      </div>
+    </div>
+
+    <footer>
+      <button class="footer-btn btn-reset" onclick="askReset()">🔄 RAZ</button>
+      <button class="footer-btn btn-stats" onclick="showStats()">📊 Stats</button>
+      <button class="footer-btn btn-send" onclick="askSend()">📤 Envoyer</button>
+    </footer>
+  </div>
+
+  <!-- ============ VIEW 2 : ANALYSE FINE ============ -->
+  <div class="view" id="viewFine">
+    <header>
+      <button class="back-btn" onclick="confirmBack()">← Retour</button>
+      <h1>🔍 Actions détaillées</h1>
+      <div class="badge" id="fineBadge">—</div>
+    </header>
+
+    <div class="main rows-2">
+      <div class="zone cols-3">
+        <div class="card plus" id="cardTir">
+          <div class="card-label label-small">✅ Tir réussi / panier</div>
+          <div class="counter" id="counterTir">0</div>
+          <button class="action-btn btn-plus" onclick="incrementFine('tir')">+</button>
+        </div>
+        <div class="card plus" id="cardInter">
+          <div class="card-label">✅ Interception</div>
+          <div class="counter" id="counterInter">0</div>
+          <button class="action-btn btn-plus" onclick="incrementFine('interception')">+</button>
+        </div>
+        <div class="card plus" id="cardPasseB">
+          <div class="card-label">✅ Bonne passe</div>
+          <div class="counter" id="counterPasseB">0</div>
+          <button class="action-btn btn-plus" onclick="incrementFine('bonnePasse')">+</button>
+        </div>
+      </div>
+
+      <div class="zone cols-3">
+        <div class="card minus" id="cardPasseM">
+          <div class="card-label label-small">❌ Mauvaise passe</div>
+          <div class="counter" id="counterPasseM">0</div>
+          <button class="action-btn btn-minus" onclick="incrementFine('mauvaisePasse')">−</button>
+        </div>
+        <div class="card minus" id="cardTirCote">
+          <div class="card-label">❌ Tir à côté</div>
+          <div class="counter" id="counterTirCote">0</div>
+          <button class="action-btn btn-minus" onclick="incrementFine('tirCote')">−</button>
+        </div>
+        <div class="card minus" id="cardTirDef">
+          <div class="card-label label-small">❌ Tir face à défense</div>
+          <div class="counter" id="counterTirDef">0</div>
+          <button class="action-btn btn-minus" onclick="incrementFine('tirDefense')">−</button>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <button class="footer-btn btn-reset" onclick="askReset()">🔄 RAZ</button>
+      <button class="footer-btn btn-stats" onclick="showStats()">📊 Stats</button>
+      <button class="footer-btn btn-send" onclick="askSend()">📤 Envoyer</button>
+    </footer>
+  </div>
+
+</div>
+
+<!-- MODAL RESET -->
+<div class="overlay" id="overlayReset">
+  <div class="modal">
+    <div class="modal-icon">⚠️</div>
+    <div class="modal-title">Remise à zéro</div>
+    <div class="modal-text">Tous les compteurs de cette session seront réinitialisés à 0.<br>Cette action est irréversible.</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('overlayReset')">Annuler</button>
+      <button class="btn-confirm-reset" onclick="confirmReset()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RETOUR -->
+<div class="overlay" id="overlayBack">
+  <div class="modal">
+    <div class="modal-icon">↩️</div>
+    <div class="modal-title">Quitter la session</div>
+    <div class="modal-text">Revenir à l'écran de réglages réinitialisera les compteurs en cours. Continuer ?</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('overlayBack')">Annuler</button>
+      <button class="btn-confirm-reset" onclick="confirmBackToSetup()">Quitter</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL STATS -->
+<div class="overlay" id="overlayStats">
+  <div class="modal">
+    <div class="modal-icon">📊</div>
+    <div class="modal-title">Statistiques</div>
+
+    <div class="stats-grid" id="statsGridGlobal">
+      <div class="stat-box green">
+        <div class="stat-val" id="statPlus">0</div>
+        <div class="stat-lbl">Actions +</div>
+      </div>
+      <div class="stat-box red">
+        <div class="stat-val" id="statMinus">0</div>
+        <div class="stat-lbl">Actions −</div>
+      </div>
+    </div>
+
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill-plus" id="barPlus" style="width:50%"></div>
+        <div class="progress-bar-fill-minus" id="barMinus" style="width:50%"></div>
+      </div>
+      <div class="progress-bar-labels">
+        <span id="pctPlus">—</span>
+        <span id="pctMinus">—</span>
+      </div>
+    </div>
+
+    <div class="ratio-box">
+      <div class="ratio-label">Ratio (Actions + / Actions −)</div>
+      <div class="ratio-value" id="statRatio">—</div>
+      <div class="ratio-note" id="ratioNote">Aucune donnée disponible.</div>
+    </div>
+
+    <div class="modal-actions">
+      <button style="background:#1a2a3a;color:#4fc3f7;border:1px solid #1e4060;" onclick="closeModal('overlayStats')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SEND -->
+<div class="overlay" id="overlaySend">
+  <div class="modal">
+    <div class="modal-icon">📤</div>
+    <div class="modal-title">Envoyer le bilan</div>
+
+    <div class="session-recap" id="sendRecap"></div>
+
+    <div class="modal-text" style="margin-bottom:14px;">Confirmer l'envoi de ces données vers Google Sheets ?</div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('overlaySend')">Annuler</button>
+      <button class="btn-confirm-reset" style="background:#00a152;" onclick="confirmSend()">Envoyer</button>
+    </div>
+    <div class="send-status" id="sendStatus"></div>
+  </div>
+</div>
+
+<script>
+  // ================== CONFIG ==================
+  // ⚠️ Remplace cette URL par celle de ton déploiement Google Apps Script (voir script fourni séparément)
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyVQLktApxFAGEg0LANLqEZJ63l8VLW7useKcKh-C7ryviWEYTNtn0IDY0jWhYb9DMMkQ/exec';
+
+  // ================== STATE ==================
+  let session = {
+    date: '',
+    classe: '',
+    pseudo: '',
+    couleur: '',
+    couleurAutre: '',
+    mode: '' // 'global' ou 'fine'
+  };
+
+  let countsGlobal = { plus: 0, minus: 0 };
+  let countsFine = {
+    tir: 0, interception: 0, bonnePasse: 0,
+    mauvaisePasse: 0, tirCote: 0, tirDefense: 0
+  };
+
+  // ================== INIT ==================
+  (function initDate() {
+    const d = new Date();
+    const iso = d.toISOString().split('T')[0];
+    document.getElementById('inputDate').value = iso;
+  })();
+
+  // ================== SETUP VIEW LOGIC ==================
+  function onColorChange() {
+    const val = document.getElementById('selectColor').value;
+    document.getElementById('otherColorBlock').style.display = (val === 'autre') ? 'flex' : 'none';
+    validateSetup();
+  }
+
+  function selectClass(c) {
+    document.querySelectorAll('.chip').forEach(ch => ch.classList.remove('selected'));
+    document.querySelector(`.chip[data-class="${c}"]`).classList.add('selected');
+    session.classe = c;
+    validateSetup();
+  }
+
+  function selectMode(m) {
+    document.getElementById('modeGlobal').classList.remove('selected');
+    document.getElementById('modeFine').classList.remove('selected');
+    document.getElementById(m === 'global' ? 'modeGlobal' : 'modeFine').classList.add('selected');
+    session.mode = m;
+    validateSetup();
+  }
+
+  ['inputPseudo'].forEach(id => {
+    document.getElementById(id).addEventListener('input', validateSetup);
+  });
+  document.getElementById('inputOtherColor').addEventListener('input', validateSetup);
+  document.getElementById('inputDate').addEventListener('change', validateSetup);
+
+  function validateSetup() {
+    const date = document.getElementById('inputDate').value;
+    const pseudo = document.getElementById('inputPseudo').value.trim();
+    const color = document.getElementById('selectColor').value;
+    const otherColor = document.getElementById('inputOtherColor').value.trim();
+    const classe = session.classe;
+    const mode = session.mode;
+
+    let ok = date && pseudo && color && classe && mode;
+    if (color === 'autre' && !otherColor) ok = false;
+
+    document.getElementById('startBtn').disabled = !ok;
+    document.getElementById('setupError').textContent = '';
+    return ok;
+  }
+
+  function startSession() {
+    if (!validateSetup()) {
+      document.getElementById('setupError').textContent = 'Merci de compléter tous les champs.';
+      return;
+    }
+    session.date = document.getElementById('inputDate').value;
+    session.pseudo = document.getElementById('inputPseudo').value.trim();
+    session.couleur = document.getElementById('selectColor').value;
+    session.couleurAutre = document.getElementById('inputOtherColor').value.trim();
+
+    // reset counters fresh for new session
+    countsGlobal = { plus: 0, minus: 0 };
+    countsFine = { tir: 0, interception: 0, bonnePasse: 0, mauvaisePasse: 0, tirCote: 0, tirDefense: 0 };
+    resetGlobalDisplay();
+    resetFineDisplay();
+
+    const badgeText = `${session.classe} · ${session.pseudo} · ${colorLabel()}`;
+
+    if (session.mode === 'global') {
+      document.getElementById('globalBadge').textContent = badgeText;
+      switchView('viewGlobal');
+    } else {
+      document.getElementById('fineBadge').textContent = badgeText;
+      switchView('viewFine');
+    }
+  }
+
+  function colorLabel() {
+    if (session.couleur === 'autre') return session.couleurAutre;
+    return session.couleur.charAt(0).toUpperCase() + session.couleur.slice(1);
+  }
+
+  function switchView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  // ================== BACK NAVIGATION ==================
+  function confirmBack() {
+    document.getElementById('overlayBack').classList.add('visible');
+  }
+  function confirmBackToSetup() {
+    closeModal('overlayBack');
+    switchView('viewSetup');
+  }
+
+  // ================== GLOBAL COUNTER ==================
+  function increment(type) {
+    countsGlobal[type]++;
+    const el = document.getElementById(type === 'plus' ? 'counterPlus' : 'counterMinus');
+    const card = document.getElementById(type === 'plus' ? 'cardPlus' : 'cardMinus');
+
+    el.textContent = countsGlobal[type];
+    bumpEl(el);
+    flashCard(card, type === 'plus' ? 'flash-plus' : 'flash-minus');
+  }
+
+  function resetGlobalDisplay() {
+    document.getElementById('counterPlus').textContent = '0';
+    document.getElementById('counterMinus').textContent = '0';
+  }
+
+  // ================== FINE COUNTER ==================
+  const fineMap = {
+    tir:           { id: 'counterTir',     card: 'cardTir',     type: 'plus' },
+    interception:  { id: 'counterInter',   card: 'cardInter',   type: 'plus' },
+    bonnePasse:    { id: 'counterPasseB',  card: 'cardPasseB',  type: 'plus' },
+    mauvaisePasse: { id: 'counterPasseM',  card: 'cardPasseM',  type: 'minus' },
+    tirCote:       { id: 'counterTirCote', card: 'cardTirCote', type: 'minus' },
+    tirDefense:    { id: 'counterTirDef',  card: 'cardTirDef',  type: 'minus' }
+  };
+
+  function incrementFine(key) {
+    countsFine[key]++;
+    const conf = fineMap[key];
+    const el = document.getElementById(conf.id);
+    const card = document.getElementById(conf.card);
+    el.textContent = countsFine[key];
+    bumpEl(el);
+    flashCard(card, conf.type === 'plus' ? 'flash-plus' : 'flash-minus');
+  }
+
+  function resetFineDisplay() {
+    Object.values(fineMap).forEach(conf => {
+      document.getElementById(conf.id).textContent = '0';
+    });
+  }
+
+  function bumpEl(el) {
+    el.classList.remove('bump');
+    void el.offsetWidth;
+    el.classList.add('bump');
+  }
+  function flashCard(card, cls) {
+    card.classList.remove('flash-plus', 'flash-minus');
+    void card.offsetWidth;
+    card.classList.add(cls);
+  }
+
+  // ================== RESET ==================
+  function askReset() {
+    document.getElementById('overlayReset').classList.add('visible');
+  }
+  function confirmReset() {
+    if (session.mode === 'global') {
+      countsGlobal = { plus: 0, minus: 0 };
+      resetGlobalDisplay();
+    } else {
+      countsFine = { tir: 0, interception: 0, bonnePasse: 0, mauvaisePasse: 0, tirCote: 0, tirDefense: 0 };
+      resetFineDisplay();
+    }
+    closeModal('overlayReset');
+  }
+
+  // ================== STATS ==================
+  function showStats() {
+    let p, m;
+    if (session.mode === 'global') {
+      p = countsGlobal.plus;
+      m = countsGlobal.minus;
+      document.getElementById('statsGridGlobal').innerHTML = `
+        <div class="stat-box green"><div class="stat-val">${p}</div><div class="stat-lbl">Actions +</div></div>
+        <div class="stat-box red"><div class="stat-val">${m}</div><div class="stat-lbl">Actions −</div></div>
+      `;
+    } else {
+      p = countsFine.tir + countsFine.interception + countsFine.bonnePasse;
+      m = countsFine.mauvaisePasse + countsFine.tirCote + countsFine.tirDefense;
+      document.getElementById('statsGridGlobal').innerHTML = `
+        <div class="stat-box green"><div class="stat-val">${countsFine.tir}</div><div class="stat-lbl">Tir réussi</div></div>
+        <div class="stat-box green"><div class="stat-val">${countsFine.interception}</div><div class="stat-lbl">Interception</div></div>
+        <div class="stat-box green"><div class="stat-val">${countsFine.bonnePasse}</div><div class="stat-lbl">Bonne passe</div></div>
+        <div class="stat-box red"><div class="stat-val">${countsFine.mauvaisePasse}</div><div class="stat-lbl">Mauvaise passe</div></div>
+        <div class="stat-box red"><div class="stat-val">${countsFine.tirCote}</div><div class="stat-lbl">Tir à côté</div></div>
+        <div class="stat-box red"><div class="stat-val">${countsFine.tirDefense}</div><div class="stat-lbl">Tir face défense</div></div>
+      `;
+      document.getElementById('statsGridGlobal').classList.add('cols-3');
+    }
+
+    const total = p + m;
+    const ratioEl = document.getElementById('statRatio');
+    const noteEl = document.getElementById('ratioNote');
+    if (m === 0) {
+      ratioEl.textContent = p === 0 ? '—' : '∞';
+      noteEl.textContent = (m === 0 && p === 0) ? 'Aucune donnée disponible.' : 'Aucune action négative enregistrée.';
+    } else {
+      const ratio = (p / m).toFixed(2);
+      ratioEl.textContent = ratio;
+      if (ratio >= 2)      noteEl.textContent = '🟢 Excellent ratio — très bonnes actions positives.';
+      else if (ratio >= 1) noteEl.textContent = '🟡 Ratio correct — plus d\'actions positives que négatives.';
+      else                 noteEl.textContent = '🔴 Ratio défavorable — plus d\'actions négatives que positives.';
+    }
+
+    if (total > 0) {
+      const pPct = Math.round((p / total) * 100);
+      const mPct = 100 - pPct;
+      document.getElementById('barPlus').style.width = pPct + '%';
+      document.getElementById('barMinus').style.width = mPct + '%';
+      document.getElementById('pctPlus').textContent = `✅ ${pPct}%`;
+      document.getElementById('pctMinus').textContent = `❌ ${mPct}%`;
+    } else {
+      document.getElementById('barPlus').style.width = '50%';
+      document.getElementById('barMinus').style.width = '50%';
+      document.getElementById('pctPlus').textContent = '—';
+      document.getElementById('pctMinus').textContent = '—';
+    }
+
+    document.getElementById('overlayStats').classList.add('visible');
+  }
+
+  // ================== SEND TO SHEETS ==================
+  function askSend() {
+    const recap = document.getElementById('sendRecap');
+    let lines = `<strong>Classe :</strong> ${session.classe}<br>
+                 <strong>Pseudo :</strong> ${session.pseudo}<br>
+                 <strong>Équipe :</strong> ${colorLabel()}<br>
+                 <strong>Date :</strong> ${session.date}<br>
+                 <strong>Type :</strong> ${session.mode === 'global' ? 'Analyse globale' : 'Analyse fine'}<br><br>`;
+    if (session.mode === 'global') {
+      lines += `<strong>Actions + :</strong> ${countsGlobal.plus}<br><strong>Actions − :</strong> ${countsGlobal.minus}`;
+    } else {
+      lines += `Tir réussi : ${countsFine.tir} · Interception : ${countsFine.interception} · Bonne passe : ${countsFine.bonnePasse}<br>
+                Mauvaise passe : ${countsFine.mauvaisePasse} · Tir à côté : ${countsFine.tirCote} · Tir face défense : ${countsFine.tirDefense}`;
+    }
+    recap.innerHTML = lines;
+    document.getElementById('sendStatus').textContent = '';
+    document.getElementById('sendStatus').className = 'send-status';
+    document.getElementById('overlaySend').classList.add('visible');
+  }
+
+  function buildPayload() {
+    const payload = {
+      date: session.date,
+      classe: session.classe,
+      pseudo: session.pseudo,
+      couleur: session.couleur === 'autre' ? `autre - ${session.couleurAutre}` : session.couleur,
+      mode: session.mode,
+      tirReussi: 0,
+      interception: 0,
+      bonnePasse: 0,
+      nonRenseignePlus: 0,
+      mauvaisePasse: 0,
+      tirCote: 0,
+      tirFaceDefense: 0,
+      nonRenseigneMinus: 0
+    };
+
+    if (session.mode === 'global') {
+      payload.nonRenseignePlus = countsGlobal.plus;
+      payload.nonRenseigneMinus = countsGlobal.minus;
+    } else {
+      payload.tirReussi = countsFine.tir;
+      payload.interception = countsFine.interception;
+      payload.bonnePasse = countsFine.bonnePasse;
+      payload.mauvaisePasse = countsFine.mauvaisePasse;
+      payload.tirCote = countsFine.tirCote;
+      payload.tirFaceDefense = countsFine.tirDefense;
+    }
+    return payload;
+  }
+
+  function confirmSend() {
+    const statusEl = document.getElementById('sendStatus');
+    statusEl.textContent = 'Envoi en cours…';
+    statusEl.className = 'send-status pending';
+
+    const payload = buildPayload();
+
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    })
+    .then(() => {
+      statusEl.textContent = '✅ Bilan envoyé avec succès.';
+      statusEl.className = 'send-status ok';
+    })
+    .catch(() => {
+      statusEl.textContent = '⚠️ Échec de l\'envoi. Vérifie la connexion.';
+      statusEl.className = 'send-status err';
+    });
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('visible');
+  }
+
+  document.querySelectorAll('.overlay').forEach(o => {
+    o.addEventListener('click', e => {
+      if (e.target === o) o.classList.remove('visible');
+    });
+  });
+</script>
+</body>
+</html>
